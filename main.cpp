@@ -71,13 +71,14 @@ private:
   CryptoContext<DCRTPoly> cryptoContext;
   KeyPair<DCRTPoly> keyPair;
 
-  const std::string DATAFOLDER = "shoppingmallData";
+  const std::string DATAFOLDER = "serialData";
+  const std::string cartdatadir="CartData";
 
 public:
   ShoppingMall()
   {
-    // if (!loadState())
-    // {
+     if (!loadState())
+     {
     // OpenFHE 초기화
     CCParams<CryptoContextBFVRNS> parameters;
     parameters.SetPlaintextModulus(1032193);
@@ -94,7 +95,7 @@ public:
     cryptoContext->EvalMultKeyGen(keyPair.secretKey);
 
     saveState(); // 초기화 상태 저장
-    //  }
+      }
   }
 
   void addProduct(int id, const std::string &name, double price)
@@ -249,6 +250,13 @@ public:
       Ciphertext<DCRTPoly> encryptedDiscount,
       Coupon c)
   {
+
+    // directory to save .bin datas
+
+    
+    std::filesystem::create_directory(cartdatadir);
+
+
     // 파일명 지정
     std::string fileName = "Encrypted_Order_" + currentClient->name + ".bin";
 
@@ -269,17 +277,17 @@ public:
       // 암호화된 주문 데이터 저장
       for (size_t i = 0; i < encryptedCart.size(); i++)
       {
-        if (!Serial::SerializeToFile(fileName + "_Price_" + std::to_string(i + 1) + ".bin", encryptedCart[i].first, SerType::BINARY))
+        if (!Serial::SerializeToFile(cartdatadir+"/"+ "Price_" + std::to_string(i + 1)+fileName, encryptedCart[i].first, SerType::BINARY))
           throw std::runtime_error("Failed to serialize encrypted price.");
 
-        if (!Serial::SerializeToFile(fileName + "_Quantity_" + std::to_string(i + 1) + ".bin", encryptedCart[i].second, SerType::BINARY))
+        if (!Serial::SerializeToFile(cartdatadir+"/" + "Quantity_" + std::to_string(i + 1)+fileName, encryptedCart[i].second, SerType::BINARY))
           throw std::runtime_error("Failed to serialize encrypted quantity.");
       }
 
-      if (!Serial::SerializeToFile(fileName + "_Discount.bin", encryptedDiscount, SerType::BINARY))
+      if (!Serial::SerializeToFile(cartdatadir+"/"+"Discount_"+fileName, encryptedDiscount, SerType::BINARY))
         throw std::runtime_error("Failed to serialize encrypted discount.");
 
-      if (!Serial::SerializeToFile(fileName + "_Total.bin", encryptedTotal, SerType::BINARY))
+      if (!Serial::SerializeToFile(cartdatadir+"/"+"Total_"+fileName, encryptedTotal, SerType::BINARY))
         throw std::runtime_error("Failed to serialize encrypted total.");
 
       std::cout << "Encrypted receipt has been saved with metadata and binary files.\n";
@@ -314,12 +322,6 @@ public:
         return false;
       }
 
-      // 비밀 키 복원
-      if (!Serial::DeserializeFromFile(DATAFOLDER + "/key-private.txt", keyPair.secretKey, SerType::BINARY))
-      {
-        std::cerr << "Failed to load private key.\n";
-        return false;
-      }
 
       // EvalMultKey 복원
       std::ifstream emkeys(DATAFOLDER + "/key-eval-mult.txt", std::ios::in | std::ios::binary);
